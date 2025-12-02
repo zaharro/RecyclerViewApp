@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_marginBottom="4dp"
+    android:background="@android:color/white">
+
+    <ImageView
+        android:id="@+id/ivItemImage"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scaleType="centerCrop"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="Изображение элемента" />
+
+    <TextView
+        android:id="@+id/tvItemImageCaption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textStyle="italic"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:text="Подпись к изображению" />
+
+</LinearLayout>

@@ -7,28 +7,52 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.weather.databinding.FragmentMainBinding
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 
+
 class MainFragment : Fragment() {
 
     private var _binding: FragmentMainBinding? = null
     private val binding get() = _binding!!
-    private val myItems = mutableListOf<DisplayItem>()
-    private lateinit var recyclerActivityAdapter: RecyclerActivityAdapter
+    private val viewModel: MainViewModel by viewModels()
+    private lateinit var recyclerActivityAdapter: MVVMRecyclerActivityAdapter
+    private var lastDeletedItem: DisplayItem? = null
+    private var lastDeletedItemPosition: Int = -1
 
-    private val drawableImageIds = listOf(
-        R.drawable.image_1,
-        R.drawable.image_2,
-        R.drawable.image_3
-    )
-    private var imageIndex = 0
+    /*     private val myItems = mutableListOf<DisplayItem>()
 
-    private var deletedItem: DisplayItem? = null
-    private var deletedItemPosition: Int = -1
+ private val drawableImageIds = listOf(
+       R.drawable.image_1,
+       R.drawable.image_2,
+       R.drawable.image_3
+   )
+   private var imageIndex = 0
+
+   private var deletedItem: DisplayItem? = null
+   private var deletedItemPosition: Int = -1
+
+
+   private fun setupInitialData() {
+       myItems.apply {
+           add(DisplayItem.Header("Мои путевые заметки"))
+           add(
+               DisplayItem.TextItem(
+                   "Инструкция",
+                   "Зажмите элемент для перемещения. Смахните вправо для удаления."
+               )
+           )
+
+           add(DisplayItem.ImageItem(drawableImageIds[0], "Фото #1"))
+           add(DisplayItem.ImageItem(drawableImageIds[1], "Фото #2"))
+           add(DisplayItem.ImageItem(drawableImageIds[2], "Фото #3"))
+       }
+   }*/
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -41,30 +65,13 @@ class MainFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupInitialData()
         setupRecyclerView()
         setupFab()
-    }
-
-    private fun setupInitialData() {
-        myItems.apply {
-            add(DisplayItem.Header("Мои путевые заметки"))
-            add(
-                DisplayItem.TextItem(
-                    "Инструкция",
-                    "Зажмите элемент для перемещения. Смахните вправо для удаления."
-                )
-            )
-
-            add(DisplayItem.ImageItem(drawableImageIds[0], "Фото #1"))
-            add(DisplayItem.ImageItem(drawableImageIds[1], "Фото #2"))
-            add(DisplayItem.ImageItem(drawableImageIds[2], "Фото #3"))
-        }
+        observeViewModel() // Наблюдение за данными из ViewModel
     }
 
     private fun setupRecyclerView() {
-        recyclerActivityAdapter = RecyclerActivityAdapter(myItems)
-
+        recyclerActivityAdapter = MVVMRecyclerActivityAdapter()
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = recyclerActivityAdapter
@@ -76,27 +83,17 @@ class MainFragment : Fragment() {
 
     private fun setupFab() {
         binding.fabAdd.setOnClickListener {
-            // Поочередное добавление текстовых и графических элементов
-            if (myItems.size % 2 == 0) {
-                val newImageItem = DisplayItem.ImageItem(
-                    drawableImageIds[imageIndex],
-                    "Добавлено изображение #${imageIndex + 1}"
-                )
-                recyclerActivityAdapter.addItem(newImageItem)
-                imageIndex =
-                    (imageIndex + 1) % drawableImageIds.size
-                Toast.makeText(context, "Добавлено изображение", Toast.LENGTH_SHORT).show()
+            viewModel.addItem()
+            Toast.makeText(context, "Элемент добавлен", Toast.LENGTH_SHORT).show()
+            binding.recyclerView.postDelayed({
+                binding.recyclerView.smoothScrollToPosition(recyclerActivityAdapter.itemCount - 1)
+            }, 100)
+        }
+    }
 
-            } else {
-                val newItem = DisplayItem.TextItem(
-                    "Описание к фото #${myItems.size}",
-                    "Текст с описанием."
-                )
-                recyclerActivityAdapter.addItem(newItem)
-                Toast.makeText(context, "Добавлен текст ", Toast.LENGTH_SHORT).show()
-            }
-
-            binding.recyclerView.smoothScrollToPosition(recyclerActivityAdapter.itemCount - 1)
+    private fun observeViewModel() {
+        viewModel.items.observe(viewLifecycleOwner) { items ->
+            recyclerActivityAdapter.submitList(items)
         }
     }
 
@@ -107,8 +104,9 @@ class MainFragment : Fragment() {
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder
             ): Int {
+                val position = viewHolder.getBindingAdapterPosition()
                 // Исключение заголовка из перетаскивания и свайпа
-                if (recyclerActivityAdapter.getItemViewType(viewHolder.getBindingAdapterPosition()) == RecyclerActivityAdapter.VIEW_TYPE_HEADER) {
+                if (position != RecyclerView.NO_POSITION && viewModel.isHeader(position)) {
                     return 0
                 }
 
@@ -125,31 +123,36 @@ class MainFragment : Fragment() {
                 val fromPosition = viewHolder.getBindingAdapterPosition()
                 val toPosition = target.getBindingAdapterPosition()
 
-                // Запрет перетаскивания на позицию заголовка
-                if (recyclerActivityAdapter.getItemViewType(toPosition) == RecyclerActivityAdapter.VIEW_TYPE_HEADER) {
+                // Исключение перетаскивания на позицию заголовка
+                if (toPosition != RecyclerView.NO_POSITION && viewModel.isHeader(toPosition)) {
                     return false
                 }
 
-                recyclerActivityAdapter.onItemMove(fromPosition, toPosition)
+                viewModel.moveItem(
+                    fromPosition,
+                    toPosition
+                )
                 return true
             }
 
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, i: Int) {
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.getBindingAdapterPosition()
-                deletedItem =
-                    recyclerActivityAdapter.removeItem(position) // Удаление и сохранение элемента для отмены удаления
-                deletedItemPosition = position
+                if (position == RecyclerView.NO_POSITION) return
 
-                Snackbar.make(binding.root, "Элемент удален", Snackbar.LENGTH_LONG)
-                    .setAction("Отменить") {
-                        deletedItem?.let { item ->
-                            recyclerActivityAdapter.restoreItem(
-                                item,
-                                deletedItemPosition
-                            )
+                val removedItem = viewModel.removeItem(position)
+                removedItem?.let {
+                    lastDeletedItem = it
+                    lastDeletedItemPosition = position
+
+                    Snackbar.make(binding.root, "Элемент удален", Snackbar.LENGTH_LONG)
+                        .setAction("Отменить") {
+                            // Восстанавление элемента через ViewModel
+                            lastDeletedItem?.let { itemToRestore ->
+                                viewModel.restoreItem(itemToRestore, lastDeletedItemPosition)
+                            }
                         }
-                    }
-                    .show()
+                        .show()
+                }
             }
 
             override fun isLongPressDragEnabled(): Boolean {

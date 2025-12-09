@@ -58,7 +58,9 @@ dependencies {
 
     implementation(libs.androidx.fragment.ktx)
 
-/*implementation (com.github.bumptech.glide:glide:4.15.0)
-annotationProcessor (com.github.bumptech.glide:compiler:4.15.0)*/
+// ViewModel and LiveData
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+
 
 }

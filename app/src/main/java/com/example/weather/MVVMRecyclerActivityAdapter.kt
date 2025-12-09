@@ -7,15 +7,22 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.weather.databinding.ItemHeaderBinding
 import com.example.weather.databinding.ItemImageBinding
 import com.example.weather.databinding.ItemTextBinding
-import java.util.Collections
 
-class RecyclerActivityAdapter(private val items: MutableList<DisplayItem>) :
-    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    companion object {
+class MVVMRecyclerActivityAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    private var items: List<DisplayItem> = emptyList()
+
+    private companion object {
         const val VIEW_TYPE_HEADER = 0
         const val VIEW_TYPE_TEXT_ITEM = 1
         const val VIEW_TYPE_IMAGE_ITEM = 2
+    }
+
+    // Метод для обновления данных в адаптере
+    fun submitList(newList: List<DisplayItem>) {
+        items = newList // Замена старого списка новым
+        notifyDataSetChanged() // Уведомление адаптера о полном изменении данных
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -58,37 +65,39 @@ class RecyclerActivityAdapter(private val items: MutableList<DisplayItem>) :
 
     override fun getItemCount(): Int = items.size
 
-    fun addItem(item: DisplayItem) {
-        items.add(item)
-        notifyItemInserted(items.size - 1)
-    }
+    // Методы addItem, removeItem, restoreItem, onItemMove удалены, т.к. они теперь управляются из ViewModel,
+    // а adapter только отображает новый список, полученный через submitList.
 
-    fun onItemMove(fromPosition: Int, toPosition: Int) {
-        if (fromPosition < toPosition) {
-            for (i in fromPosition until toPosition) {
-                Collections.swap(items, i, i + 1)
-            }
-        } else {
-            for (i in fromPosition downTo toPosition + 1) {
-                Collections.swap(items, i, i - 1)
-            }
+    /*    fun addItem(item: DisplayItem) {
+            items.add(item)
+            notifyItemInserted(items.size - 1)
         }
-        notifyItemMoved(fromPosition, toPosition)
-    }
+
+        fun onItemMove(fromPosition: Int, toPosition: Int) {
+            if (fromPosition < toPosition) {
+                for (i in fromPosition until toPosition) {
+                    Collections.swap(items, i, i + 1)
+                }
+            } else {
+                for (i in fromPosition downTo toPosition + 1) {
+                    Collections.swap(items, i, i - 1)
+                }
+            }
+            notifyItemMoved(fromPosition, toPosition)
+        }
 
 
-    fun removeItem(position: Int): DisplayItem {
-        val deletedItem = items.removeAt(position)
-        notifyItemRemoved(position)
-        return deletedItem
-    }
+        fun removeItem(position: Int): DisplayItem {
+            val deletedItem = items.removeAt(position)
+            notifyItemRemoved(position)
+            return deletedItem
+        }
 
 
-    fun restoreItem(item: DisplayItem, position: Int) {
-        items.add(position, item)
-        notifyItemInserted(position)
-    }
-
+        fun restoreItem(item: DisplayItem, position: Int) {
+            items.add(position, item)
+            notifyItemInserted(position)
+        }*/
 
     class HeaderViewHolder(private val binding: ItemHeaderBinding) :
         RecyclerView.ViewHolder(binding.root) {
